@@ -17,7 +17,6 @@ class MainView : View("Twitter-grabber") {
         top {
             vbox {
                 textfield(mainController.url) {
-
                     enableWhen {
                         mainController.running.not()
                     }
@@ -26,6 +25,7 @@ class MainView : View("Twitter-grabber") {
                     alignment = Pos.CENTER
                     checkbox("only video", mainController.onlyVideo)
                     checkbox("skip re-tweets", mainController.includeRetweets)
+                    checkbox("skip duplicates", mainController.skipDuplicates)
                 }
             }
         }

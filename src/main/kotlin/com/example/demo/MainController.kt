@@ -9,7 +9,10 @@ import tornadofx.*
 import twitter4j.MediaEntity
 import twitter4j.Paging
 import twitter4j.TwitterFactory
+import java.io.ByteArrayOutputStream
 import java.io.File
+import java.security.DigestInputStream
+import java.security.MessageDigest
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
@@ -17,6 +20,7 @@ import java.util.concurrent.atomic.AtomicInteger
 val twitterRegex = Regex("https?://twitter\\.com/(?<id>[^/\\W]+)")
 
 class MainController : Controller() {
+    val skipDuplicates = SimpleBooleanProperty()
     val url = SimpleStringProperty()
     val running = SimpleBooleanProperty()
     val total = SimpleIntegerProperty()
@@ -25,10 +29,11 @@ class MainController : Controller() {
 
     val pool = Executors.newFixedThreadPool(5)
     val dir = File("media")
+    val digests = HashSet<String>()
 
 
     init {
-        Runtime.getRuntime().addShutdownHook(Thread{
+        Runtime.getRuntime().addShutdownHook(Thread {
             pool.shutdownNow()
         })
         if (!dir.exists()) {
@@ -44,7 +49,7 @@ class MainController : Controller() {
             val idDir = File(dir, id)
             val twitter = TwitterFactory.getSingleton()
 
-            if(!idDir.exists())idDir.mkdir()
+            if (!idDir.exists()) idDir.mkdir()
             println(id)
             running.set(true)
 
@@ -90,7 +95,7 @@ class MainController : Controller() {
     }
 
     val atomicInt = AtomicInteger()
-    private fun download(url: String, dir:File) {
+    private fun download(url: String, dir: File) {
         if (!running.value) return
 
         CompletableFuture.runAsync(Runnable {
@@ -99,11 +104,34 @@ class MainController : Controller() {
             println("$id ${Thread.currentThread().name.split("-").last()} $url")
             val ext = if (url.contains(".mp4")) ".mp4" else ".jpg"
             http.execute(HttpGet(url)).use { response ->
-                if(response.statusLine.statusCode==200) {
-                    val file = File(dir, id.toString() + ext)
-                    file.outputStream().use {
-                        response.entity.writeTo(it)
+                if (response.statusLine.statusCode == 200) {
+                    val md = MessageDigest.getInstance("MD5")
+
+
+                    val inputStream = DigestInputStream(response.entity.content, md)
+                    val baos = ByteArrayOutputStream()
+
+
+                    inputStream.copyTo(baos)
+
+                    if (skipDuplicates.get()) {
+                        val sum = String(md.digest())
+                        if (digests.contains(sum)) {
+                            println("found duplicate")
+                        } else {
+                            digests.add(sum)
+                            val file = File(dir, id.toString() + ext)
+                            file.outputStream().use {
+                                baos.writeTo(it)
+                            }
+                        }
+                    }else{
+                        val file = File(dir, id.toString() + ext)
+                        file.outputStream().use {
+                            baos.writeTo(it)
+                        }
                     }
+
                 }
             }
             runLater {
