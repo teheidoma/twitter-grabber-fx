@@ -25,7 +25,7 @@ class MainController : Controller() {
     val running = SimpleBooleanProperty()
     val total = SimpleIntegerProperty()
     val onlyVideo = SimpleBooleanProperty()
-    val includeRetweets = SimpleBooleanProperty()
+    val skipRetweets = SimpleBooleanProperty()
 
     val pool = Executors.newFixedThreadPool(5)
     val dir = File("media")
@@ -59,12 +59,13 @@ class MainController : Controller() {
                     println(i)
                     val page = Paging(i, 200)
                     val list = twitter.timelines().getUserTimeline(id, page)
+                    if(list.size==0) break
                     list.filter { it.mediaEntities.isNotEmpty() }
                         .filter {
-                            if (includeRetweets.get()) {
-                                true
+                            if (skipRetweets.get()) {
+                                !it.isRetweet
                             } else {
-                                it.isRetweet
+                                true
                             }
                         }
                         .flatMap { it.mediaEntities.toList() }

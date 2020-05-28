@@ -6,9 +6,7 @@ import javafx.geometry.Orientation
 import javafx.geometry.Pos
 import tornadofx.*
 import java.awt.Desktop
-import java.io.File
 import java.net.URI
-import java.nio.file.Paths
 
 class MainView : View("Twitter-grabber") {
     private val mainController: MainController by inject()
@@ -24,7 +22,7 @@ class MainView : View("Twitter-grabber") {
                 hbox {
                     alignment = Pos.CENTER
                     checkbox("only video", mainController.onlyVideo)
-                    checkbox("skip re-tweets", mainController.includeRetweets)
+                    checkbox("skip re-tweets", mainController.skipRetweets)
                     checkbox("skip duplicates", mainController.skipDuplicates)
                 }
             }
@@ -70,5 +68,9 @@ class MainView : View("Twitter-grabber") {
                 }
             }
         }
+    }
+
+    override fun onDock() {
+        currentWindow?.sizeToScene()
     }
 }
